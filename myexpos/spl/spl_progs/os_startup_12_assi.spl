@@ -1,0 +1,50 @@
+// load init program from disk to memory
+loadi(65, 7);
+loadi(66, 8);
+
+// load the INT10 module from the disk to the memory
+loadi(22,35);
+loadi(23,36);
+
+// load the exception handler routine from the disk to the memory
+loadi(2, 15);
+loadi(3, 16);
+
+// load library module from disk to memory
+loadi(63, 13);
+loadi(64, 14);
+
+// load timer interrupt module from disk (block 17, 18) to memory (page 4, 5)
+loadi(4, 17);
+loadi(5, 18);
+
+// load interrupt 7 from disk to memory
+loadi(16,29);
+loadi(17,30);
+
+// load idle process from disk to memory
+loadi(69, 11);
+loadi(70, 12);
+
+//===========IDLE PROCESS===============
+PTBR = PAGE_TABLE_BASE;
+// Set the User Area page number in the Process Table
+[PROCESS_TABLE + 11] = 82;
+
+// setting uid of the process to be 0 since it is the first process table entry
+[PROCESS_TABLE + 1] = 0;
+
+// setting idle process state as CREATED
+[PROCESS_TABLE + 4] = CREATED;
+
+// set UPTR of idle process
+[PROCESS_TABLE + 13] = 8*512;
+
+// set KPTR of idle process
+[PROCESS_TABLE + 12] = 0;
+
+//set PTBR of idle process
+[PROCESS_TABLE + 14] = PAGE_TABLE_BASE;
+
+//set PTLR of idle process
+[PROCESS_TABLE + 15] = 10;

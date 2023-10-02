@@ -1,0 +1,60 @@
+// ===> device manager module <===
+
+alias functionNum R1;
+alias currentPID R2;
+alias word R3;
+alias returnVal R0;
+
+// Terminal write function { Arguments : (PID,Word) , Return val : NIL }
+if(functionNum == 3) then 
+
+    //Calling Acquire Terminal
+
+    multipush(R1, R2, R3); 
+    functionNum = 8;
+    currentPID = [SYSTEM_STATUS_TABLE + 1];
+    call MOD_0;
+    multipop(R1, R2, R3);
+    
+    print(word);
+
+    //Calling Release Terminal
+
+    multipush(R1, R2, R3);
+    functionNum = 9;
+    currentPID = [SYSTEM_STATUS_TABLE + 1];
+    call MOD_0;
+    multipop(R1, R2, R3);
+    return;
+
+endif;
+
+// Terminal read function
+
+if (functionNum == 4) then // 4 is for terminal read
+     
+     R1 = 8; //initialising R1 with function number for acquiring terminal
+     R2 = currentPID;// R2 with current PID
+
+     call MOD_0;// calling the resource manager module
+     multipop(R1,R2,R3);
+
+     read; // for requesting to read from the terminal
+     
+     // changing the state of the current process to wait_terminal
+     [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE+1]*16) + 4] = WAIT_TERMINAL;
+
+     // invoking the scheduler
+     multipush(R1, R2, R3);
+     call MOD_5;
+     multipop(R1, R2, R3);
+
+//converting the logical adress of the word in R3 to physical adderss and storing in input buffer field of process table to the obtained physical address of the word
+     alias bufferAddr R3;
+	  bufferAddr =  ([PTBR + 2 * (bufferAddr/512)] * 512) + (bufferAddr % 512);
+	  [bufferAddr] = [(PROCESS_TABLE + (16 * [SYSTEM_STATUS_TABLE + 1]))  + 8];
+ 
+     return;
+else
+     return;
+endif;

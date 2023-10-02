@@ -1,0 +1,78 @@
+// ========================================> LOADING REQUIRED FILES/DATA INTO MEMORY FOR EXECUTION <==============================================
+//module 7 (boot module)
+loadi(54,67);
+loadi(55,68);
+
+//idle code
+loadi(69, 11);
+loadi(70, 12);
+
+// user programme uses virual addresses for execution
+// In page table 
+// page/page index = i ==> [PTBR+2*i],[PTBR+(2*i)+1] i = 0,1,2,...,9
+
+// =====================================> SETTING UP VIRTUAL MEMORY SPACE FOR IDLE <===============================================
+
+// As modules execute in kernel mode, the kernel stack of the currently scheduled process is used as the caller-stack for module invocation.
+// While switching to module, the CALL instruction pushes the IP address of the instruction following the CALL instruction 
+// on the top of the kernel stack and starts execution of the corresponding module.
+SP = 82*512-1;
+
+call BOOT_MODULE;
+
+PTBR = PAGE_TABLE_BASE;
+PTLR = 10;
+
+//Library
+[PTBR + 0] = 63;
+[PTBR + 1] = "0100";
+[PTBR + 2] = 64;
+[PTBR + 3] = "0100";
+
+//Heap
+[PTBR + 4] = -1;
+[PTBR + 5] = "0000";
+[PTBR + 6] = -1;
+[PTBR + 7] = "0000";
+
+//Code
+[PTBR + 8] = 69;
+[PTBR + 9] = "0100";
+[PTBR + 10] = 70;
+[PTBR + 11] = "0100";
+[PTBR + 12] = -1;
+[PTBR + 13] = "0000";
+[PTBR + 14] = -1;
+[PTBR + 15] = "0000";
+
+//Stack
+[PTBR + 16] = 81;
+[PTBR + 17] = "0110";
+[PTBR + 18] = -1;
+[PTBR + 19] = "0000";
+
+// ===========================================> SETTING UP PROCESS TABLE FOR IDLE <=================================================
+// pid
+[PROCESS_TABLE + 1] = 0;
+// state
+[PROCESS_TABLE + 4] = RUNNING;
+// user area page number, physical address
+[PROCESS_TABLE + 11] = 82;
+// logical address kernal stack pointer (KPTR) 
+[PROCESS_TABLE + 12] = 0; 
+// logical address user stack point (UPTR) 
+[PROCESS_TABLE + 13] = 8*512;
+// PTBR,  physical address
+[PROCESS_TABLE + 14] = PAGE_TABLE_BASE;
+// PTLR
+[PROCESS_TABLE + 15] = 10;
+
+// ===========================================> SETTING UP SYSTEM_STATUS_TABLE <=================================================
+[SYSTEM_STATUS_TABLE + 1] = 0;	
+
+//===========================================> GIVING CONTROL TO USER PROCESS <=================================================
+// pushing logical address of 1st instruction of idle.xsm to user stack of idle process
+[81*512] = [69*512+1];
+SP = 8*512;
+
+ireturn; 

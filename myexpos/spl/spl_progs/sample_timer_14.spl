@@ -1,0 +1,43 @@
+// RUNS IN KERNEL MODE (ADDRESSES USED SHOULD BE PHYSICAL)
+//============> CHANGING STACK FROM USER TO KERNEL <================
+// Things needed to be done immediately after interrupt handler starts running are : 
+// STEP 1 : get current process PID using [SYSTEM_STATUS_TABLE + 1]
+// STEP 2 : go to that process table entry using PROCESS_TABLE + ( [SYSTEM_STATUS_TABLE + 1] * 16) {each process table entry is 16 word long}
+// STEP 3 : get that process user stack pointer which is at that process table's 13th word (0 indexed)
+
+
+
+[PROCESS_TABLE + ( [SYSTEM_STATUS_TABLE + 1] * 16) + 13] = SP;
+
+
+
+// STEP 4 : set SP to top of kernel stack of the process (YES each process has it's own kernel stack as far as I know till now)
+// SP to UArea Page number * 512 - 1
+
+
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 11] * 512 - 1;
+
+
+// Save the user context to the kernel stack using the Backup instruction. (Since User registers R0-19 are not being saved )
+// backup instruction backs up registers in the order BP, R0-19 inside kernel stack
+
+
+backup;
+
+//===============================> SWITCHING PROGRAM <=============================
+//  The scheduler assumes that the state of the process has been changed to READY.
+
+
+[PROCESS_TABLE + ( [SYSTEM_STATUS_TABLE + 1] * 16 ) + 4] = READY;
+call MOD_5;
+
+//=====================> CHANGING STACK FROM KERNEL TO USER <===============================
+restore;
+//Assigning kernal stack pointer to 0
+
+[PROCESS_TABLE + 16 * ([SYSTEM_STATUS_TABLE + 1]) + 12] = 0;
+
+//Assigning SP to user
+
+SP = [PROCESS_TABLE + 16 * ([SYSTEM_STATUS_TABLE + 1]) + 13];
+ireturn ;
