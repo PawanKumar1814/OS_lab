@@ -19,8 +19,8 @@ alias state R3;
 alias newPID R4;
 
 newPID = 0;
-i=1;
-while(i<16-currentPID) do
+i=currentPID+1;
+while(i<16) do
 	state = [process_table_entry + i*16 + 4];
 	if(state == READY || state == CREATED) then
 		newPID = [process_table_entry + i*16 + 1];

@@ -13,7 +13,6 @@ if(functionNum == 8) then//for the acquire terminal
     endwhile;
     [TERMINAL_STATUS_TABLE] = 1;//set the status as 1
     [TERMINAL_STATUS_TABLE + 1] = currentPID;
-    breakpoint;
     return;
 endif;
 if(functionNum == 9) then //for the Release Terminal function
