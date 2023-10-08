@@ -1,3 +1,8 @@
+// Modules in eXpOS are used to perform certain logical tasks
+// A user program can never invoke a module directly. Modules can be invoked from interrupt routines, other modules or the OS startup code.
+// For a module with several functions, each function is given a function number to distinguish them within the module. 
+// This function number should be passed as argument in the register R1 along with other arguments in R2, R3 etc.
+// Register R0 is reserved for return value.
 // ===============> LOADING REQUIRED FILES/DATA INTO MEMORY FOR EXECUTION <=======================
 
 //Library

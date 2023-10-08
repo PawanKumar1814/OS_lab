@@ -1,3 +1,4 @@
+//=========> RESOURCE MANAGER MODULE <===========
 alias functionNum R1;
 alias currentPID R2;
 alias returnVal R0;

@@ -1,11 +1,11 @@
-int main()
-{
+int main(){
+
 	decl
 		int a;
 	enddecl
+
 	begin
 		while(1==1) do
-		    a = exposcall("Write",-2,"idle");
 			a=1;
 		endwhile;
 		return 0;
