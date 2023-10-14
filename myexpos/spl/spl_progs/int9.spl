@@ -1,6 +1,7 @@
 // ====> Exec system Call <======
 
 //saving the userSP for future purpose
+breakpoint;
 alias userSP R0;
 userSP = SP;
 
@@ -12,14 +13,14 @@ alias process_table R2;
 process_table = PROCESS_TABLE + currentPID * 16;
 
 [process_table + 13] = userSP;//assigining user stack pointer to userSP
-SP = [process_table + 11];// assigning SP to user area page number
+SP = [process_table + 11]; // assigning SP to user area page number
 
 //setting the MOD flag to exec system call number(i.e, 9)
 [process_table + 9] = 9;
 
-// accessing the filename i.e, arg 1
+// Accessing the fileName thats in the arg 1
 alias fileName R3;
-fileName = [[PTBR + 2*((userSP-4)/512)]*512 + ((userSP)%512)];//getting the physical address
+fileName = [[PTBR + 2*((userSP-4)/512)]*512 + ((userSP)%512)];
 
 //checking if the file is present in inode table
 alias inodeEntry R4;
@@ -28,13 +29,14 @@ inodeEntry = 0;
 R5 = 0;
 
 while(inodeEntry < MAX_FILE_NUM) do 
-    if(fileName == [INODE_TABLE + inodeEntry*16 + 1]) then  // if file is present in inode table 
-            flag = 1;// set flag as 1
+    if(fileName == [INODE_TABLE + inodeEntry*16 + 1]) then  
+            flag = 1;
             break;
     endif;
     inodeEntry = inodeEntry + 1;
 endwhile;
 
+breakpoint;
 // if file is not present in inode table or not in XEXE then return -1
 if(flag == 0) then
     [[PTBR + 2*((userSP-1)/512)]*512 + ((userSP-1)%512)] = -1; // returning -1
@@ -43,11 +45,11 @@ if(flag == 0) then
     ireturn;
 endif;
 
+
 //calling the exit process which is present in process manager module
 multipush(R0, R1, R2, R3, R4, R5);
 R1 = 3;
 R2 = currentPID;
-
 call MOD_1;// process manager module
 
 multipop(R0, R1, R2, R3, R4, R5);
@@ -55,43 +57,46 @@ multipop(R0, R1, R2, R3, R4, R5);
 // Accessing same user area page number because for efficient memory management. 
 //Reusing memory pages that were previously allocated to terminated processes reduces memory fragmentation
 //Instead of constantly allocating new memory pages for new processes, the operating system tries to recycle memory pages whenever possible.
+
 alias userAreaPage R5;
 userAreaPage = [process_table + 11];
 [MEMORY_FREE_LIST + userAreaPage] = [MEMORY_FREE_LIST + userAreaPage] + 1; //incrementing the memory free list entry of user area page
-[SYSTEM_STATUS_TABLE + 2] = [SYSTEM_STATUS_TABLE + 2] - 1;                  //decrementing the MEM_FREE_COUNT field in the system status table
+[SYSTEM_STATUS_TABLE + 2] = [SYSTEM_STATUS_TABLE + 2] - 1;                 //decrementing the MEM_FREE_COUNT field in the system status table
 
-// setting the SP to kernel stack of the new process by using the userAreapage.
+
+// setting the SP to kernel stack of the new process.
 SP = userAreaPage * 512;
 
-// updating state to running(new process uses the PID of the terminated process)
+// changing state to running
 [process_table + 4] = RUNNING;
 
 // storing the index obtained above in the inode index field in the process table.
 [process_table + 7] = inodeEntry;
 
 // Allocating new pages and setting the page table entries for the new process
-
 //library(the libraray page need not to be allocated.So, must be set to read-only)
 [PTBR+0] = 63;
-[PTBR+1] = "0100";//set to read only
+[PTBR+1] = "0100";//read only
 [PTBR+2] = 64;
 [PTBR+3] = "0100";
+
+//Invoke the Get Free Page function to allocate 2 stack and 2 heap pages
 
 //heap
 multipush(R0, R1, R2, R3, R4, R5);
 R1 = 1;
-call MOD_2; //Invoke the Get Free Page function to allocate 2 stack and 2 heap pages
+call MOD_2;
 [PTBR+4] = R0;
 [PTBR+5] = "0110";
 R1 = 1;
 call MOD_2;
 call MOD_2;
 [PTBR+6] = R0;
-[PTBR+7] = "0110"
+[PTBR+7] = "0110";
 
 // Stack
 R1 = 1;
-call MOD_2; 
+call MOD_2;
 [PTBR+16] = R0;
 [PTBR+17] = "0110";
 R1 = 1;
@@ -99,7 +104,6 @@ call MOD_2;
 [PTBR+18] = R0;
 [PTBR+19] = "0110";
 multipop(R0, R1, R2, R3, R4, R5);
-
 
 //code
 alias nBlocks R6;
@@ -120,8 +124,6 @@ while(i<4) do
     endif;
     i = i + 1;
 endwhile;
-
-
 multipop(R0, R1, R2, R3, R4, R5);
 
 
@@ -130,7 +132,7 @@ i=0;
 while(i<nBlocks) do
 	loadi([PTBR+8+2*i], [INODE_TABLE + inodeEntry*16 + 8 + i]);
 i = i + 1;
-endwhile
+endwhile;
 
 // storing the entry point IP on top of user stack
 [[PTBR + 16]*512] = [[PTBR+8]*512+ 1];
@@ -139,9 +141,8 @@ endwhile
 SP = 8*512;
 //changing mode to 0
 [process_table + 9] = 0;
-breakpoint
+breakpoint;
 ireturn;
-
 
 
 
