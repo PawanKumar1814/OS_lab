@@ -6,8 +6,8 @@
 alias currentPID R0;
 alias process_table_entry R1;
 
-currentPID = [SYSTEM_STATUS_TABLE +  1];
-process_table_entry = PROCESS_TABLE + 16*currentPID;
+currentPID = [SYSTEM_STATUS_TABLE +  1];//obtain the pid fo the current process
+process_table_entry = PROCESS_TABLE + 16*currentPID; 
 
 multipush (BP);
  
@@ -23,7 +23,7 @@ alias newPID R4;
 
 newPID = 0;
 i=currentPID+1;
-while(i<16) do
+while(i<16) do // iterate through the process table entries from current PID+1 to find a state of ready or created
 	state = [PROCESS_TABLE + i*16 + 4];
 	if(state == READY || state == CREATED) then
 		newPID = [PROCESS_TABLE + i*16 + 1];

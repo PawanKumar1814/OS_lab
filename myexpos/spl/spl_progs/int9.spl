@@ -1,0 +1,170 @@
+// ====> Exec system Call <======
+
+//saving the userSP for future purpose
+alias userSP R0;
+userSP = SP;
+
+// saving user stack top in process table entry of that process
+alias currentPID R1;
+currentPID = [SYSTEM_STATUS_TABLE + 1];
+
+alias process_table R2;
+process_table = PROCESS_TABLE + currentPID * 16;
+
+[process_table + 13] = userSP;//assigining user stack pointer to userSP
+SP = [process_table + 11];// assigning SP to user area page number
+
+//setting the MOD flag to exec system call number(i.e, 9)
+[process_table + 9] = 9;
+
+// accessing the filename i.e, arg 1
+alias fileName R3;
+fileName = [[PTBR + 2*((userSP-4)/512)]*512 + ((userSP)%512)];//getting the physical address
+
+//checking if the file is present in inode table
+alias inodeEntry R4;
+alias flag R5;
+inodeEntry = 0;
+R5 = 0;
+
+while(inodeEntry < MAX_FILE_NUM) do 
+    if(fileName == [INODE_TABLE + inodeEntry*16 + 1]) then  // if file is present in inode table 
+            flag = 1;// set flag as 1
+            break;
+    endif;
+    inodeEntry = inodeEntry + 1;
+endwhile;
+
+// if file is not present in inode table or not in XEXE then return -1
+if(flag == 0) then
+    [[PTBR + 2*((userSP-1)/512)]*512 + ((userSP-1)%512)] = -1; // returning -1
+    [process_table + 9] = 0;                                   // changing mode flag
+    SP = userSP;                                               // changing to user stack
+    ireturn;
+endif;
+
+//calling the exit process which is present in process manager module
+multipush(R0, R1, R2, R3, R4, R5);
+R1 = 3;
+R2 = currentPID;
+
+call MOD_1;// process manager module
+
+multipop(R0, R1, R2, R3, R4, R5);
+
+// Accessing same user area page number because for efficient memory management. 
+//Reusing memory pages that were previously allocated to terminated processes reduces memory fragmentation
+//Instead of constantly allocating new memory pages for new processes, the operating system tries to recycle memory pages whenever possible.
+alias userAreaPage R5;
+userAreaPage = [process_table + 11];
+[MEMORY_FREE_LIST + userAreaPage] = [MEMORY_FREE_LIST + userAreaPage] + 1; //incrementing the memory free list entry of user area page
+[SYSTEM_STATUS_TABLE + 2] = [SYSTEM_STATUS_TABLE + 2] - 1;                  //decrementing the MEM_FREE_COUNT field in the system status table
+
+// setting the SP to kernel stack of the new process by using the userAreapage.
+SP = userAreaPage * 512;
+
+// updating state to running(new process uses the PID of the terminated process)
+[process_table + 4] = RUNNING;
+
+// storing the index obtained above in the inode index field in the process table.
+[process_table + 7] = inodeEntry;
+
+// Allocating new pages and setting the page table entries for the new process
+
+//library(the libraray page need not to be allocated.So, must be set to read-only)
+[PTBR+0] = 63;
+[PTBR+1] = "0100";//set to read only
+[PTBR+2] = 64;
+[PTBR+3] = "0100";
+
+//heap
+multipush(R0, R1, R2, R3, R4, R5);
+R1 = 1;
+call MOD_2; //Invoke the Get Free Page function to allocate 2 stack and 2 heap pages
+[PTBR+4] = R0;
+[PTBR+5] = "0110";
+R1 = 1;
+call MOD_2;
+call MOD_2;
+[PTBR+6] = R0;
+[PTBR+7] = "0110"
+
+// Stack
+R1 = 1;
+call MOD_2; 
+[PTBR+16] = R0;
+[PTBR+17] = "0110";
+R1 = 1;
+call MOD_2;
+[PTBR+18] = R0;
+[PTBR+19] = "0110";
+multipop(R0, R1, R2, R3, R4, R5);
+
+
+//code
+alias nBlocks R6;
+alias i R7;
+i = 0;
+nBlocks = (([INODE_TABLE + 16*inodeEntry + 2]-1)/512) + 1;
+multipush(R0, R1, R2, R3, R4, R5);
+
+while(i<4) do
+    if(i<nBlocks) then
+        R1 = 1;
+        call MOD_2;
+        [PTBR+8+2*i] = R0;
+        [PTBR+9+2*i] = "0100";
+    else
+        [PTBR + 8 + 2*i] = -1;
+        [PTBR + 9 + 2*i] = "0000";
+    endif;
+    i = i + 1;
+endwhile;
+
+
+multipop(R0, R1, R2, R3, R4, R5);
+
+
+//loading the code
+i=0;
+while(i<nBlocks) do
+	loadi([PTBR+8+2*i], [INODE_TABLE + inodeEntry*16 + 8 + i]);
+i = i + 1;
+endwhile
+
+// storing the entry point IP on top of user stack
+[[PTBR + 16]*512] = [[PTBR+8]*512+ 1];
+
+//changing stack to user stack
+SP = 8*512;
+//changing mode to 0
+[process_table + 9] = 0;
+breakpoint
+ireturn;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
