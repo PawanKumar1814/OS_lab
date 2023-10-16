@@ -1,68 +1,56 @@
-//====> Process Manager Module <=====
-
+// =====> Process Manager Module < ======
 alias functionNum R1;
-alias currentPID R2;
+alias PID R2;
+alias userAreaPage R9;
 
-//free userAreaPage
-if(functionNum == 2) then // functionNum is 2 for free user area page
-    alias userAreaPage R3;
-    userAreaPage = [PROCESS_TABLE + 16 * currentPID + 11]; // obtaining the user area page number from currentPID
-    multipush(R1, R2, R3);
-    R1 = 2;
-    R2 = userAreaPage;
-    call MOD_2;//invoking release page function in memory manager module
-    multipop(R1, R2, R3);
-    return ;
+// FOR FREE_USER_AREA_PAGE
+if(functionNum == 2)then
+	userAreaPage=[PROCESS_TABLE+PID*16+11];// get user_area_page from PID
+	multipush(R1,R2);
+	R1=RELEASE_PAGE;// invoking the release page function
+	R2=userAreaPage;
+	call MEMORY_MANAGER;// which is present in memory manager module
+	multipop(R1,R2);
+	return;
 endif;
 
-
-//exit process
-if(functionNum == 3) then
-    multipush(R1, R2);
-    //free page table
-    R1 = 4;
-    R2 = currentPID;
-    call MOD_1;//Invoke the Free Page Table function in module_0
-
-    //free userAreaPage
-    R1 = 2;
-    R2 = currentPID;
-    call MOD_1;//Invoke the Free user Area Page function with the same PID
-
-    multipop(R1, R2);
-
-    [PROCESS_TABLE + (16 * currentPID) + 4] = TERMINATED;
-    return ;
+// FOR EXIT PROCESS
+if(functionNum == 3)then 
+	PID=[SYSTEM_STATUS_TABLE+1];// get the PID
+	multipush(R1,R2,R9);
+	R1=FREE_PAGE_TABLE;
+	R2=PID;
+	call PROCESS_MANAGER;// invoking the free page table present in process_manager
+	R1=FREE_USER_AREA_PAGE;
+	R2=PID;
+	call PROCESS_MANAGER;// invokin the free user area page
+	multipop(R1,R2,R9);
+	[PROCESS_TABLE+PID*16+4]=TERMINATED;// setting the stage to terminated
+return;
 endif;
 
 //free page table
-if(functionNum == 4) then
-    [PTBR + 0] = -1;//Invalidate the page table entries for the library pages by setting page number as -1 and auxiliary data as "0000"
-    [PTBR + 1] = "0000";
-    [PTBR + 2] = -1;
-    [PTBR + 3] = "0000";
-
-    alias i R3;
-    alias pageNum R4;
-
-    i = 1;
-    while( i < (PTLR -1)) do //For each valid entry in the page table, release the page by invoking the Release Page
-        pageNum = [PTBR + 2 + 2 * i];
-        if(pageNum != -1) then// for every valid entry
-            multipush(R1, R2, R3, R4);
-            
-            //release page
-            R1 = 2;
-            R2 = pageNum;
-            call MOD_2;
-
-            multipop(R1, R2, R3, R4);
-            [PTBR + 2 + 2 * i] = -1;// invalidating the page table entries
-            [PTBR + 3 + 2 * i] = "0000";
-        endif;
-    i = i + 1;
-    endwhile;
-    return ;
-
+if(functionNum == 4)then
+        //Invalidate the page table entries for the library pages by setting page number as -1 and auxiliary data as "0000" for each entry.
+	alias pageTable R11;
+	pageTable=PAGE_TABLE_BASE+PID*20;
+	[pageTable+0]=-1;
+	[pageTable+1]="0000";
+	[pageTable+2]=-1;
+	[pageTable+3]="0000";
+	alias i R9;
+	i=0;
+	while(i<20)do // For each valid entry in the page table, release the page by invoking the Release Page
+		if([pageTable+i]!=-1)then
+			multipush(R1,R2,R9);
+			R1=RELEASE_PAGE;
+			R2=[pageTable+i];
+			call MEMORY_MANAGER;
+			multipop(R1,R2,R9);
+			[pageTable+i]=-1;
+			[pageTable+i+1]="0000";
+		endif;
+		i=i+2;
+	endwhile;
+	return;
 endif;
-

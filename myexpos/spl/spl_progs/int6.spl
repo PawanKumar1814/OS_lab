@@ -1,3 +1,4 @@
+//=====> Read system call <=======
 
 //setting the MODE FLAG for current process as 7 which is read system call
 [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1 ]*16) +9 ] = 7;

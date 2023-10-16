@@ -17,10 +17,10 @@ reqPID = [TERMINAL_STATUS_TABLE + 1];
 alias process_table_entry R1;
 process_table_entry = PROCESS_TABLE + (reqPID * 16);
 
-breakpoint;
+
 // copy the value present in P0 into the input buffer field of the process table entry
 [process_table_entry + 8] = P0;
-breakpoint;
+
 
 //============ release the terminal ================
 
